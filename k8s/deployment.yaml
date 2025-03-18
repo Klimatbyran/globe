@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: globe
+  namespace: klimatkollen
+  labels:
+    app: globe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: globe
+  template:
+    metadata:
+      labels:
+        app: globe
+    spec:
+      containers:
+      - name: globe
+        image: ghcr.io/klimatbyran/globe:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      imagePullSecrets:
+      - name: github-registry
