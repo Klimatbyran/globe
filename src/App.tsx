@@ -49,8 +49,12 @@ function App() {
     setAnimationComplete(false);
 
     const baseDelay = 2000;
+    const processedCompanies = new Set<string>();
     
     for (const company of companies) {
+      // Skip if we've already processed this company
+      if (processedCompanies.has(company.wikidataId)) continue;
+      
       const period = company.reportingPeriods[0];
       if (!period?.emissions) continue;
 
@@ -58,6 +62,9 @@ function App() {
                        period.emissions.statedTotalEmissions?.total ?? 0;
 
       const adjustedDelay = baseDelay / speedMultiplier;
+      
+      // Mark this company as processed
+      processedCompanies.add(company.wikidataId);
       
       toast(company.name, {
         description: (
