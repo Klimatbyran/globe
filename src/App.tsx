@@ -291,7 +291,7 @@ function App() {
 
       <Toaster 
         theme="dark"
-        position="bottom-center"
+        position="bottom-left"
         closeButton
         richColors
         expand={true}
