@@ -59,8 +59,10 @@ function App() {
       }
     };
 
+    // Only load data when auto mode changes or year changes
+    // This prevents reloading when other state changes
     loadData();
-  }, [currentYear, shownNotifications, isAutoMode]);
+  }, [currentYear, isAutoMode]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -110,14 +112,27 @@ function App() {
       duration: Math.min(5000, Math.max(1000, emissions / 1000000 * 1000)),
     });
 
-    setActiveCompanies(prev => [...prev, {
-      company,
-      period,
-      emissions
-    }]);
-  }, [currentYear, shownNotifications]);
+    // In manual mode, we replace the previous company
+    // In auto mode, we add to the existing companies
+    if (!isAutoMode) {
+      setActiveCompanies([{
+        company,
+        period,
+        emissions
+      }]);
+    } else {
+      setActiveCompanies(prev => [...prev, {
+        company,
+        period,
+        emissions
+      }]);
+    }
+  }, [currentYear, shownNotifications, isAutoMode]);
 
   const animateCompanies = async (companies: Company[]) => {
+    // Safety check - don't animate if not in auto mode
+    if (!isAutoMode) return;
+    
     setActiveCompanies([]);
     setAnimationComplete(false);
 
@@ -132,6 +147,12 @@ function App() {
     console.log(`Processing ${filteredCompanies.length} new companies for year ${currentYear}`);
     
     for (const company of filteredCompanies) {
+      // Double-check we're still in auto mode before adding each company
+      if (!isAutoMode) {
+        console.log('Auto mode turned off during animation, stopping');
+        break;
+      }
+      
       const period = company.reportingPeriods[0];
       if (!period?.emissions) continue;
 
@@ -159,11 +180,14 @@ function App() {
 
       await new Promise(resolve => setTimeout(resolve, adjustedDelay));
 
-      setActiveCompanies(prev => [...prev, {
-        company,
-        period,
-        emissions
-      }]);
+      // Check again before updating state
+      if (isAutoMode) {
+        setActiveCompanies(prev => [...prev, {
+          company,
+          period,
+          emissions
+        }]);
+      }
     }
 
     setAnimationComplete(true);
@@ -172,7 +196,10 @@ function App() {
     if (isAutoMode && currentYear < 2023) {
       const yearTransitionDelay = 5000 / speedMultiplier;
       setTimeout(() => {
-        setCurrentYear(prev => prev + 1);
+        // Final check before advancing year
+        if (isAutoMode) {
+          setCurrentYear(prev => prev + 1);
+        }
       }, yearTransitionDelay);
     }
   };
