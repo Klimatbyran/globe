@@ -25,6 +25,9 @@ function App() {
   const [riseSpeed, setRiseSpeed] = useState(1);
   const [particleSpeed, setParticleSpeed] = useState(1);
 
+  // Keep track of shown notifications to prevent duplicates
+  const [shownNotifications] = useState(new Set<string>());
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -32,6 +35,12 @@ function App() {
         setError(null);
         const data = await fetchEmissionsData(currentYear);
         setEmissionsData(data);
+        
+        // Clear previous notifications when year changes
+        if (currentYear !== data.year) {
+          shownNotifications.clear();
+        }
+        
         animateCompanies(data.companies);
       } catch (err) {
         console.error('Error loading emissions data:', err);
@@ -42,19 +51,23 @@ function App() {
     };
 
     loadData();
-  }, [currentYear]);
+  }, [currentYear, shownNotifications]);
 
   const animateCompanies = async (companies: Company[]) => {
     setActiveCompanies([]);
     setAnimationComplete(false);
 
     const baseDelay = 2000;
-    const processedCompanies = new Set<string>();
     
-    for (const company of companies) {
-      // Skip if we've already processed this company
-      if (processedCompanies.has(company.wikidataId)) continue;
-      
+    // Filter out companies we've already shown notifications for
+    const filteredCompanies = companies.filter(company => {
+      const notificationKey = `${company.wikidataId}-${currentYear}`;
+      return !shownNotifications.has(notificationKey);
+    });
+    
+    console.log(`Processing ${filteredCompanies.length} new companies for year ${currentYear}`);
+    
+    for (const company of filteredCompanies) {
       const period = company.reportingPeriods[0];
       if (!period?.emissions) continue;
 
@@ -63,10 +76,14 @@ function App() {
 
       const adjustedDelay = baseDelay / speedMultiplier;
       
-      // Mark this company as processed
-      processedCompanies.add(company.wikidataId);
+      // Create a unique key for this notification
+      const notificationKey = `${company.wikidataId}-${currentYear}`;
+      
+      // Mark this notification as shown
+      shownNotifications.add(notificationKey);
       
       toast(company.name, {
+        id: notificationKey, // Use a unique ID for the toast
         description: (
           <div>
             <p>{Math.round(emissions).toLocaleString()} tons CO2</p>
