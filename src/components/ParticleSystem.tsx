@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: ParticleSystemConfig = {
   maxAge: 60000,
   particleSize: 0.01,
   heightVariation: 0.3,
-  baseHeight: 1.2,
+  baseHeight: 1.1, // Lägre starthöjd för snabbare synlighet
   riseSpeed: 1,
   particleSpeed: 1
 };
@@ -131,7 +131,7 @@ export function ParticleSystem({
 
         const emissionPoint = new THREE.Vector3(x, y, z)
           .normalize()
-          .multiplyScalar(currentConfig.earthRadius);
+          .multiplyScalar(currentConfig.earthRadius * 1.05); // Lite högre startpunkt
 
         const idx = index * 3;
         data.positions[idx] = emissionPoint.x;

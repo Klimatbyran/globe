@@ -84,8 +84,11 @@ export function initializeParticlePosition(
       (Math.random() - 0.5) * variation
     ));
   
+  // Starta lite högre upp för att synas snabbare
+  const initialHeight = Math.max(height, radius * 1.1);
+  
   // Normalize and scale to the desired height
-  position.normalize().multiplyScalar(height);
+  position.normalize().multiplyScalar(initialHeight);
   
   return [position.x, position.y, position.z];
 }
