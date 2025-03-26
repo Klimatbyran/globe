@@ -21,7 +21,6 @@ function App() {
   
   // Particle system controls
   const [dispersionRate, setDispersionRate] = useState(0.02);
-  const [particleLifetime, setParticleLifetime] = useState(60);
   const [riseSpeed, setRiseSpeed] = useState(1);
   const [particleSpeed, setParticleSpeed] = useState(1);
 
@@ -166,7 +165,7 @@ function App() {
             speedMultiplier={speedMultiplier}
             config={{
               dispersionRate,
-              maxAge: particleLifetime * 1000,
+              maxAge: Infinity, // Particles live forever
               riseSpeed,
               particleSpeed
             }}
@@ -244,27 +243,6 @@ function App() {
               </div>
             </div>
 
-            {/* Particle Lifetime */}
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-4 h-4" />
-                <label className="text-sm">Particle Lifetime (seconds)</label>
-              </div>
-              <input
-                type="range"
-                min="10"
-                max="120"
-                step="1"
-                value={particleLifetime}
-                onChange={(e) => setParticleLifetime(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-              />
-              <div className="flex justify-between mt-1 text-xs">
-                <span>10s</span>
-                <span>{particleLifetime}s</span>
-                <span>120s</span>
-              </div>
-            </div>
 
             {/* Rise Speed */}
             <div>
