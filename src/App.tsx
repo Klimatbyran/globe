@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Earth } from './components/Earth';
 import { ParticleSystem } from './components/ParticleSystem';
 import { EmissionCircles } from './components/EmissionCircles';
+import { CompanySearch } from './components/CompanySearch';
 import { fetchEmissionsData } from './services/api';
-import { AlertTriangle, Timer, Wind, Clock, ArrowUp, Zap } from 'lucide-react';
+import { AlertTriangle, Timer, Wind, ArrowUp, Zap, Search, ToggleLeft, ToggleRight } from 'lucide-react';
 import { ActiveCompany, Company, EmissionPeriod, EmissionsData } from './types/emissions';
 import { toast, Toaster } from 'sonner';
 
@@ -18,6 +19,8 @@ function App() {
   const [animationComplete, setAnimationComplete] = useState(false);
   const [particleCount, setParticleCount] = useState(0);
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(true);
   
   // Particle system controls
   const [dispersionRate, setDispersionRate] = useState(0.02);
@@ -40,7 +43,12 @@ function App() {
           shownNotifications.clear();
         }
         
-        animateCompanies(data.companies);
+        // Only auto-animate companies if in auto mode
+        if (isAutoMode) {
+          animateCompanies(data.companies);
+        } else {
+          setAnimationComplete(true);
+        }
       } catch (err) {
         console.error('Error loading emissions data:', err);
         setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -50,6 +58,55 @@ function App() {
     };
 
     loadData();
+  }, [currentYear, shownNotifications, isAutoMode]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Open search with Cmd+K or Ctrl+K
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+      // Close search with Escape
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleAddCompany = useCallback((company: Company) => {
+    const period = company.reportingPeriods[0];
+    if (!period?.emissions) return;
+
+    const emissions = period.emissions.calculatedTotalEmissions ?? 
+                     period.emissions.statedTotalEmissions?.total ?? 0;
+    
+    // Create a unique key for this notification
+    const notificationKey = `${company.wikidataId}-${currentYear}`;
+    
+    // Mark this notification as shown
+    shownNotifications.add(notificationKey);
+    
+    toast(company.name, {
+      id: notificationKey,
+      description: (
+        <div>
+          <p>{Math.round(emissions).toLocaleString()} tons CO2</p>
+          <EmissionCircles company={{ company, period, emissions }} tonsPerParticle={50000} />
+        </div>
+      ),
+      duration: Math.min(5000, Math.max(1000, emissions / 1000000 * 1000)),
+    });
+
+    setActiveCompanies(prev => [...prev, {
+      company,
+      period,
+      emissions
+    }]);
   }, [currentYear, shownNotifications]);
 
   const animateCompanies = async (companies: Company[]) => {
@@ -188,15 +245,57 @@ function App() {
         <p>Total Emissions: {Math.round(getCurrentEmissions()).toLocaleString()} tons CO2</p>
         <p>Companies Loaded: {activeCompanies.length}</p>
         <p>Active Particles: {particleCount.toLocaleString()}</p>
-        {animationComplete && currentYear < 2023 && (
+        {!isAutoMode && animationComplete && (
+          <p className="mt-2 text-blue-400">Tryck Cmd+K för att söka och lägga till företag</p>
+        )}
+        {isAutoMode && animationComplete && currentYear < 2023 && (
           <p className="mt-2 text-green-400">Loading next year in a few seconds...</p>
         )}
       </div>
+
+      {/* Search Button */}
+      <button 
+        onClick={() => setIsSearchOpen(true)}
+        className="absolute top-4 left-4 bg-gray-800 hover:bg-gray-700 text-white p-2 rounded-full"
+        title="Sök företag (Cmd+K)"
+      >
+        <Search className="w-5 h-5" />
+      </button>
+
+      {/* Company Search Modal */}
+      {emissionsData && (
+        <CompanySearch 
+          companies={emissionsData.companies}
+          onSelectCompany={handleAddCompany}
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
+      )}
 
       {/* Combined Controls Panel */}
       <div className="absolute right-4 top-4 text-white bg-black bg-opacity-50 p-4 rounded max-w-xs w-full space-y-6">
         <div>
           <h3 className="font-semibold mb-4 text-lg">Particle Controls</h3>
+          
+          {/* Mode Toggle */}
+          <div className="mb-4">
+            <button 
+              onClick={() => setIsAutoMode(!isAutoMode)}
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-md w-full"
+            >
+              {isAutoMode ? (
+                <>
+                  <ToggleRight className="w-5 h-5 text-green-400" />
+                  <span>Automatiskt läge</span>
+                </>
+              ) : (
+                <>
+                  <ToggleLeft className="w-5 h-5" />
+                  <span>Manuellt läge (Cmd+K för att söka)</span>
+                </>
+              )}
+            </button>
+          </div>
           
           <div className="space-y-4">
             {/* Animation Speed */}
