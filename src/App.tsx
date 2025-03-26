@@ -47,6 +47,7 @@ function App() {
         if (isAutoMode) {
           animateCompanies(data.companies);
         } else {
+          // In manual mode, just set animation as complete without adding companies
           setAnimationComplete(true);
         }
       } catch (err) {
@@ -280,7 +281,13 @@ function App() {
           {/* Mode Toggle */}
           <div className="mb-4">
             <button 
-              onClick={() => setIsAutoMode(!isAutoMode)}
+              onClick={() => {
+                // When switching to manual mode, clear active companies
+                if (isAutoMode) {
+                  setActiveCompanies([]);
+                }
+                setIsAutoMode(!isAutoMode);
+              }}
               className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-md w-full"
             >
               {isAutoMode ? (
