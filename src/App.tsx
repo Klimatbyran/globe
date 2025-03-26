@@ -111,24 +111,27 @@ function App() {
     // Mark this notification as shown
     shownNotifications.add(notificationKey);
     
+    // Create the company object to add
+    const companyToAdd = {
+      company,
+      period,
+      emissions
+    };
+    
+    // Add the company immediately to ensure it's visible
+    setActiveCompanies(prev => [...prev, companyToAdd]);
+    
+    // Show the toast notification
     toast(company.name, {
       id: notificationKey,
       description: (
         <div>
           <p>{Math.round(emissions).toLocaleString()} tons CO2</p>
-          <EmissionCircles company={{ company, period, emissions }} tonsPerParticle={50000} />
+          <EmissionCircles company={companyToAdd} tonsPerParticle={50000} />
         </div>
       ),
       duration: Math.min(5000, Math.max(1000, emissions / 1000000 * 1000)),
     });
-
-    // Always add to existing companies in manual mode
-    // This allows users to build up a collection of companies
-    setActiveCompanies(prev => [...prev, {
-      company,
-      period,
-      emissions
-    }]);
   }, [currentYear, shownNotifications]);
 
   const animateCompanies = async (companies: Company[]) => {

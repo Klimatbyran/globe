@@ -170,9 +170,33 @@ export function ParticleSystem({
     geometry.setAttribute('color', new THREE.BufferAttribute(particleData.colors, 3));
     geometry.setAttribute('opacity', new THREE.BufferAttribute(particleData.opacities, 1));
     
+    // Immediately activate some particles for newly added companies
+    const currentTime = performance.now();
+    let activatedCount = 0;
+    
+    // Get the newly added companies
+    const newCompanyIds = activeCompanies.map(c => c.company.wikidataId);
+    
+    // Activate particles for new companies
+    particleStatesRef.current.forEach((state, index) => {
+      if (!state.active && newCompanyIds.includes(state.companyId)) {
+        state.active = true;
+        state.startTime = currentTime;
+        particleData.opacities[index] = 0.8;
+        activatedCount++;
+      }
+    });
+    
+    if (activatedCount > 0) {
+      geometry.attributes.opacity.needsUpdate = true;
+    }
+    
     setActiveParticleCount(particleStatesRef.current.size);
     lastUpdateTime.current = performance.now();
-  }, [particleData]);
+    
+    // Update particle count for parent component
+    onParticleCountChange?.(particleStatesRef.current.size);
+  }, [particleData, activeCompanies, onParticleCountChange]);
 
   useFrame((_, delta) => {
     if (!points.current) return;
@@ -188,8 +212,14 @@ export function ParticleSystem({
     const particlesToActivate = Math.floor(currentConfig.particlesPerSecond * delta * speedMultiplier);
     let newActiveCount = 0;
 
+    // Activate particles more aggressively when companies are added
+    const maxParticlesToActivate = Math.max(
+      particlesToActivate,
+      Math.floor(particleStatesRef.current.size * 0.1) // Activate at least 10% of particles
+    );
+    
     particleStatesRef.current.forEach((state, index) => {
-      if (!state.active && newActiveCount < particlesToActivate) {
+      if (!state.active && newActiveCount < maxParticlesToActivate) {
         state.active = true;
         state.startTime = currentTime;
         opacities[index] = 0.8;
