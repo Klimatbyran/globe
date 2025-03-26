@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: klimatkollen
+  name: globe
   labels:
-    name: klimatkollen
+    name: globe
     environment: production
   annotations:
-    description: "Namespace for Klimatkollen applications"
+    description: "Namespace for Globe visualization application"
