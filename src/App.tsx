@@ -21,7 +21,6 @@ function App() {
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isAutoMode, setIsAutoMode] = useState(true);
-  const [autoRefill, setAutoRefill] = useState(true);
   
   // Particle system controls
   const [dispersionRate, setDispersionRate] = useState(0.02);
@@ -49,6 +48,7 @@ function App() {
           animateCompanies(data.companies);
         } else {
           // In manual mode, just set animation as complete without adding companies
+          setActiveCompanies([]);
           setAnimationComplete(true);
         }
       } catch (err) {
@@ -70,10 +70,10 @@ function App() {
         e.preventDefault();
         setIsSearchOpen(true);
         
-        // When opening search, switch to manual mode and disable auto-refill
+        // When opening search, switch to manual mode
         if (isAutoMode) {
           setIsAutoMode(false);
-          setAutoRefill(false);
+          setActiveCompanies([]);
         }
       }
       // Close search with Escape
@@ -168,8 +168,8 @@ function App() {
 
     setAnimationComplete(true);
 
-    // Only auto-advance to next year if in auto mode and auto-refill is enabled
-    if (isAutoMode && autoRefill && currentYear < 2023) {
+    // Only auto-advance to next year if in auto mode
+    if (isAutoMode && currentYear < 2023) {
       const yearTransitionDelay = 5000 / speedMultiplier;
       setTimeout(() => {
         setCurrentYear(prev => prev + 1);
@@ -254,10 +254,10 @@ function App() {
         <p>Total Emissions: {Math.round(getCurrentEmissions()).toLocaleString()} tons CO2</p>
         <p>Companies Loaded: {activeCompanies.length}</p>
         <p>Active Particles: {particleCount.toLocaleString()}</p>
-        {!isAutoMode && animationComplete && (
+        {!isAutoMode && (
           <p className="mt-2 text-blue-400">Tryck Cmd+K för att söka och lägga till företag</p>
         )}
-        {isAutoMode && autoRefill && animationComplete && currentYear < 2023 && (
+        {isAutoMode && animationComplete && currentYear < 2023 && (
           <p className="mt-2 text-green-400">Loading next year in a few seconds...</p>
         )}
       </div>
@@ -287,18 +287,15 @@ function App() {
           <h3 className="font-semibold mb-4 text-lg">Particle Controls</h3>
           
           {/* Mode Toggle */}
-          <div className="mb-4 space-y-2">
+          <div className="mb-4">
             <button 
               onClick={() => {
+                const newMode = !isAutoMode;
+                setIsAutoMode(newMode);
+                
                 // When switching to manual mode, clear active companies
-                if (isAutoMode) {
+                if (!newMode) {
                   setActiveCompanies([]);
-                }
-                setIsAutoMode(!isAutoMode);
-            
-                // When switching to manual mode, disable auto-refill
-                if (isAutoMode) {
-                  setAutoRefill(false);
                 }
               }}
               className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-md w-full"
@@ -315,26 +312,6 @@ function App() {
                 </>
               )}
             </button>
-        
-            {/* Auto Refill Toggle - Only show in auto mode */}
-            {isAutoMode && (
-              <button 
-                onClick={() => setAutoRefill(!autoRefill)}
-                className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-md w-full"
-              >
-                {autoRefill ? (
-                  <>
-                    <ToggleRight className="w-5 h-5 text-green-400" />
-                    <span>Automatisk påfyllnad</span>
-                  </>
-                ) : (
-                  <>
-                    <ToggleLeft className="w-5 h-5" />
-                    <span>Manuell påfyllnad</span>
-                  </>
-                )}
-              </button>
-            )}
           </div>
           
           <div className="space-y-4">
