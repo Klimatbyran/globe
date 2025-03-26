@@ -30,6 +30,14 @@ function App() {
   // Keep track of shown notifications to prevent duplicates
   const [shownNotifications] = useState(new Set<string>());
 
+  // Create a ref to track the current auto mode state
+  const isAutoModeRef = useRef(isAutoMode);
+  
+  // Update the ref whenever isAutoMode changes
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+  }, [isAutoMode]);
+  
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -43,8 +51,9 @@ function App() {
           shownNotifications.clear();
         }
         
-        // Only auto-animate companies if in auto mode
-        if (isAutoMode) {
+        // Double check auto mode before animating
+        // This prevents animation if mode changed during data loading
+        if (isAutoModeRef.current) {
           animateCompanies(data.companies);
         } else {
           // In manual mode, just set animation as complete without adding companies
@@ -75,6 +84,7 @@ function App() {
         // When opening search, switch to manual mode
         if (isAutoMode) {
           setIsAutoMode(false);
+          // Clear active companies when switching to manual mode
           setActiveCompanies([]);
         }
       }
@@ -112,26 +122,21 @@ function App() {
       duration: Math.min(5000, Math.max(1000, emissions / 1000000 * 1000)),
     });
 
-    // In manual mode, we replace the previous company
-    // In auto mode, we add to the existing companies
-    if (!isAutoMode) {
-      setActiveCompanies([{
-        company,
-        period,
-        emissions
-      }]);
-    } else {
-      setActiveCompanies(prev => [...prev, {
-        company,
-        period,
-        emissions
-      }]);
-    }
-  }, [currentYear, shownNotifications, isAutoMode]);
+    // Always add to existing companies in manual mode
+    // This allows users to build up a collection of companies
+    setActiveCompanies(prev => [...prev, {
+      company,
+      period,
+      emissions
+    }]);
+  }, [currentYear, shownNotifications]);
 
   const animateCompanies = async (companies: Company[]) => {
     // Safety check - don't animate if not in auto mode
-    if (!isAutoMode) return;
+    if (!isAutoModeRef.current) {
+      console.log('Auto mode is off, not animating companies');
+      return;
+    }
     
     setActiveCompanies([]);
     setAnimationComplete(false);
@@ -147,8 +152,8 @@ function App() {
     console.log(`Processing ${filteredCompanies.length} new companies for year ${currentYear}`);
     
     for (const company of filteredCompanies) {
-      // Double-check we're still in auto mode before adding each company
-      if (!isAutoMode) {
+      // Use the ref to check current auto mode state
+      if (!isAutoModeRef.current) {
         console.log('Auto mode turned off during animation, stopping');
         break;
       }
@@ -180,8 +185,8 @@ function App() {
 
       await new Promise(resolve => setTimeout(resolve, adjustedDelay));
 
-      // Check again before updating state
-      if (isAutoMode) {
+      // Use the ref to check current auto mode state
+      if (isAutoModeRef.current) {
         setActiveCompanies(prev => [...prev, {
           company,
           period,
@@ -190,17 +195,20 @@ function App() {
       }
     }
 
-    setAnimationComplete(true);
+    // Final check before completing animation
+    if (isAutoModeRef.current) {
+      setAnimationComplete(true);
 
-    // Only auto-advance to next year if in auto mode
-    if (isAutoMode && currentYear < 2023) {
-      const yearTransitionDelay = 5000 / speedMultiplier;
-      setTimeout(() => {
-        // Final check before advancing year
-        if (isAutoMode) {
-          setCurrentYear(prev => prev + 1);
-        }
-      }, yearTransitionDelay);
+      // Only auto-advance to next year if in auto mode
+      if (currentYear < 2023) {
+        const yearTransitionDelay = 5000 / speedMultiplier;
+        setTimeout(() => {
+          // Final check before advancing year using the ref
+          if (isAutoModeRef.current) {
+            setCurrentYear(prev => prev + 1);
+          }
+        }, yearTransitionDelay);
+      }
     }
   };
 
@@ -318,12 +326,15 @@ function App() {
             <button 
               onClick={() => {
                 const newMode = !isAutoMode;
-                setIsAutoMode(newMode);
                 
                 // When switching to manual mode, clear active companies
                 if (!newMode) {
+                  // Clear companies first, then update mode
                   setActiveCompanies([]);
                 }
+                
+                // Update mode after clearing companies
+                setIsAutoMode(newMode);
               }}
               className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-md w-full"
             >
